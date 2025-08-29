@@ -1,0 +1,74 @@
+void GetItem()
+{
+	organizationID = "";
+	perPage = 200;
+	maxProcessCount = 200;
+	syncRecord = Sync_Control[Module_Name == "Add_Item"];
+	if(syncRecord.count() == 0)
+	{
+		lastPageNumber = 1;
+		lastSyncDateTime = zoho.currenttime.addMinutes(-5);
+		insert into Sync_Control
+		[
+			Module_Name="Add_Item"
+			Last_Page=lastPageNumber
+			Last_Sync_Date=lastSyncDateTime.toString("yyyy-MM-dd'T'HH:mm:ss'Z'")
+			Added_User=zoho.loginuser
+		]
+	}
+	else
+	{
+		lastPageNumber = ifnull(syncRecord.Last_Page,1);
+		lastSyncDateTime = ifnull(syncRecord.Last_Sync_Date,zoho.currenttime.addMinutes(-5));
+	}
+	dateFilterStr = lastSyncDateTime.toString("yyyy-MM-dd'T'HH:mm:ss'Z'");
+	todayStr = zoho.currenttime.toString("yyyy-MM-dd'T'HH:mm:ss'Z'");
+	itemUrl = "https://www.zohoapis.com/inventory/v1/items?" + "date_start=" + dateFilterStr + "&date_end=" + todayStr + "&page=" + lastPageNumber + "&per_page=" + perPage + "&organization_id=" + organizationID;
+	itemResp = invokeurl
+	[
+		url :itemUrl
+		type :GET
+		connection:"zoho_oauth_connection"
+	];
+	if(itemResp.get("code") == 0)
+	{
+		processedCount = 0;
+		for each  fullItem in itemResp.get("items")
+		{
+			if(processedCount >= maxProcessCount)
+			{
+				break;
+			}
+			itemid = fullItem.get("item_id");
+			lastModified = fullItem.get("last_modified_time");
+			exist = Add_Item[Item_ID == itemid];
+			if(exist.count() == 0)
+			{
+				insert into Add_Item
+				[
+					Added_User=zoho.loginuser
+					Item_ID=itemid
+					Product_Name=ifnull(fullItem.get("name"),"")
+					Unit=ifnull(fullItem.get("unit"),"")
+					SKU=ifnull(fullItem.get("sku"),"")
+					Vendor=ifnull(fullItem.get("vendor_name"),"")
+					Status=ifnull(fullItem.get("status"),"")
+					Category=ifnull(fullItem.get("category_name"),"")
+					Cost_Price=ifnull(fullItem.get("purchase_rate"),"")
+					Available_Quantity=ifnull(fullItem.get("available_stock"),0)
+				]
+			}
+			processedCount = processedCount + 1;
+		}
+		syncRecord = Sync_Control[Module_Name == "Add_Item"];
+		if(itemResp.get("page_context").get("has_more_page") == true)
+		{
+			syncRecord.Last_Page=lastPageNumber + 1;
+		}
+		else
+		{
+			syncRecord.Last_Page=1;
+			syncRecord.Last_Sync_Date=zoho.currenttime.toString("yyyy-MM-dd'T'HH:mm:ss'Z'");
+		}
+	}
+}
