@@ -1,0 +1,52 @@
+else if(input.Transaction_Type == "Out")
+{
+	data = zoho.inventory.getRecordsByID("salesorders","886119075",input.Sales_Order.toString(),"zoho_oauth_connection");
+	salesorder = data.get("salesorder");
+	date = zoho.currentdate;
+	record_value = Map();
+	record_value.put("date",date);
+	//custom fields 
+	customFieldsList = List();
+	// Discount Value
+	cf_seal_nos = Map();
+	cf_seal_nos.put("api_name","cf_seal_no");
+	cf_seal_nos.put("value",input.Seal_No);
+	customFieldsList.add(cf_seal_nos);
+	cf_vehicle_nos = Map();
+	cf_vehicle_nos.put("api_name","cf_vehicle_no");
+	cf_vehicle_nos.put("value",input.Reg_No);
+	customFieldsList.add(cf_vehicle_nos);
+	cf_container_nos = Map();
+	cf_container_nos.put("api_name","cf_container_no");
+	cf_container_nos.put("value",input.Container_No);
+	customFieldsList.add(cf_container_nos);
+	cf_driver_names = Map();
+	cf_driver_names.put("api_name","cf_driver_name");
+	cf_driver_names.put("value",input.Driver_Name1);
+	customFieldsList.add(cf_driver_names);
+	record_value.put("custom_fields",customFieldsList);
+	arraylist = List();
+	for each  input_item in input.Items
+	{
+		lineitemmap = Map();
+		for each  so_item in salesorder.get("line_items")
+		{
+			itt = so_item.get("item_id");
+			// 		info "itt"+itt;
+			if(so_item.get("item_id") == input_item.Item_ID)
+			{
+				lineitemmap.put("so_line_item_id",so_item.get("line_item_id"));
+				lineitemmap.put("name",so_item.get("name"));
+			}
+		}
+		lineitemmap.put("quantity",input_item.Quantity);
+		arraylist.add(lineitemmap);
+	}
+	record_value.put("line_items",arraylist);
+	data = zoho.inventory.createRecord("packages?&salesorder_id=" + input.Sales_Order,"886119075",record_value,"zoho_oauth_connection");
+	if(data.get("message") == "Package created successfully. It's now time to ship!")
+	{
+		input.packages_Created = "Yes";
+	}
+	// info data;
+}
