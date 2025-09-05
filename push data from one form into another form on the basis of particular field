@@ -1,0 +1,58 @@
+
+ // data push based on particular field that i common in both the form and also not create the other record 
+packing_data = Create_MIR[Sales_Order_No.Sales_Order_No == input.Sales_Order_No.Sales_Order_No].Packing_Material;
+// info packing_data;
+row_collection = Collection();
+for each  record in packing_data
+{
+	subformrow = Job_Orders_Data.Packing_Details();
+	subformrow.No_of_Cartons=record.No_Of_Cartons;
+	subformrow.Qty_Roll=record.Qty_Roll_x_No_of_Rolls;
+	subformrow.Qty_Per_Carton=record.Qty_Per_Carton;
+	subformrow.Total_Qty=record.Quantity;
+	row_collection.insert(subformrow);
+}
+// insert into Job_Orders_Data
+// [
+// 	Added_User=zoho.loginuser
+// 	Packing_Details=row_collection
+// ]
+existing_job_order = Job_Orders_Data[Sales_Order_No.Sales_Order_No == input.Sales_Order_No.Sales_Order_No];
+if(existing_job_order != null)
+{
+	// record exists
+	// Clear old subform rows
+	existing_job_order.Packing_Details.clear();
+	// Insert new subform rows
+	existing_job_order.Packing_Details.insert(row_collection);
+	// Update user field (only if it exists in your form schema)
+	// Remove this line if your form has no 'Updated_User' field
+	// existing_job_order.Updated_User = zoho.loginuser;
+}
+else
+{
+	// Insert a new Job Order record if none exists
+	insert into Job_Orders_Data
+	[
+		Sales_Order_No=input.Sales_Order_No.Sales_Order_No
+		Packing_Details=row_collection
+		Added_User=zoho.loginuser
+	]
+}
+
+
+// 
+
+job_order = Job_Orders_Data[Sales_Order_No.Sales_Order_No == input.Sales_Order_No.Sales_Order_No];
+
+
+if(job_order != null)
+{
+
+    mir_record = Create_MIR[Sales_Order_No.Sales_Order_No == input.Sales_Order_No.Sales_Order_No];
+    if(mir_record != null)
+    {
+        mir_record.Job_No = job_order.Job_No.JOB_NO;
+    }
+}
+
