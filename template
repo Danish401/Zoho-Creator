@@ -1,0 +1,265 @@
+// You want to create a proper HTML email template → set variables → generate the dynamic URL → insert it in the mail → so the recipient can click and see the record summary or template directly.
+
+
+<%{
+	data = Inward_Material_GRI[ID == input.RecId];
+	itemDetails = data.Item_Details;
+	//for the purpose of Inspection subform 
+	InspectionDetils = data.Inspection;
+	//tobe used in Inspection check - Check Box
+	isCheckedBox = "unchecked";
+	if(data.Inspection_Check == true)
+	{
+		isCheckedBox = "checked";
+	}
+	//tobe used in Action Taken section(Note: every element is different in this section, means its not a subform)
+	isAccepted = "unchecked";
+	if(data.Accepted_to_Stock == true)
+	{
+		isAccepted = "checked";
+	}
+	isSentForRework = "unchecked";
+	if(data.Sent == true)
+	{
+		isSentForRework = "checked";
+	}
+	isReturnToSupplier = "unchecked";
+	if(data.Return_to_Supplier == true)
+	{
+		isReturnToSupplier = "checked";
+	}
+	isHoldforFurther = "unchecked";
+	if(data.Hold_for_Further_Review == true)
+	{
+		isHoldforFurther = "checked";
+	}
+	isCorrectiveActionRequired = "unchecked";
+	if(data.Corrective_Action_Required == true)
+	{
+		isCorrectiveActionRequired = "checked";
+	}
+	%>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inward Material (GRI)</title>
+  <style>
+    .inward-gri-body {
+      font-family: Arial, sans-serif;
+      margin: 50px;
+      color: #333;
+    }
+
+    .inward-gri-title {
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 5px;
+    }
+
+    .form-section {
+      margin-bottom: 30px;
+    }
+
+    .form-section label {
+      display: inline-block;
+      width: 200px;
+      margin-bottom: 10px;
+      vertical-align: top;
+    }
+
+    .form-section input[type="text"] {
+      padding: 6px;
+      width: 250px;
+      margin-bottom: 15px;
+      background-color: #eee;
+      border: 1px solid #ccc;
+    }
+
+    .item-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    .item-table th,
+    .item-table td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: left;
+    }
+
+    .checkbox-group input[type="text"] {
+      width: auto;
+      margin-right: 10px;
+    }
+
+    .remark-box {
+      width: 400px;
+    }
+	
+	.remark-box{
+		 margin-left:30px
+	}
+	.checkbox-group{
+		 display : flex ; 
+	}
+
+	
+  </style>
+</head>
+<body class="inward-gri-body">
+
+  <h2 class="inward-gri-title">Inward Material (GRI)</h2>
+
+  <div class="form-section" id="material-info">
+    <label>IM No.</label>
+    <input type="text" value="<%=data.GRN%>" readonly /><br/>
+
+    <label>Receiver Name</label>
+    <input type="text" value="<%=data.Inspector_Name%>" readonly /><br/>
+
+    <label>Purchase Order</label>
+    <input type="text" value="<%=data.Purchase_Order%>"readonly /><br/>
+
+    <label>Delivery Note / Invoice No.</label>
+    <input type="text" value="<%=data.Delivery%>" readonly /><br/>
+
+    <label>Warehouse</label>
+    <input type="text" value="<%=data.Warehouse%>" readonly /><br/>
+  </div>
+
+  <div class="form-section" id="item-details">
+    <h3>Item Details</h3>
+    <table class="item-table">
+      <thead>
+        <tr>
+          <th>SKU</th>
+		  <th>Item Description</th>
+          <th>Quantity Ordered / Balance of PO</th>
+          <th>Quantity Received</th>
+          <th>Remaining Quantity</th>
+         
+        </tr>
+      </thead>
+      <tbody>
+<%
+	for each  x in itemDetails
+	{
+		%>
+<tr>
+          <td><input type="text" value="<%=x.SKU.SKU%>" readonly ></td>
+		   <td><input type="text" value="<%=x.Item_Description%>" readonly ></td>
+          <td><input type="text" value="<%=x.Quantity_Ordered%>" readonly ></td>
+          <td><input type="text" value="<%=x.Quantity%>" readonly ></td>
+          <td><input type="text" value="<%=x.Remaining_Quantity%>" readonly ></td>
+       
+        </tr>
+<%
+	}
+	%>
+</tbody>
+    </table>
+  </div>
+
+  <div class="form-section" id="inspection-check">
+    <label>Inspection Check </label>
+	<input type="checkbox"  <%=isCheckedBox%> />
+  </div>
+
+  <div class="form-section" id="inspection-checklist">
+    <h3>Inspection Checklist</h3>
+    <table class="item-table">
+      <thead>
+        <tr>
+          <th>Item Condition</th>
+          <th>Item Labeling</th>
+          <th>Physical Condition</th>
+          <th>Dimension / Specification Check</th>
+        </tr>
+      </thead>
+      <tbody>
+<%
+	for each  y in InspectionDetils
+	{
+		%>
+<tr>
+          <td><input type="text" value="<%=y.Packing%>" readonly ></td>
+          <td><input type="text" value="<%=y.Product_Labeling%>" readonly ></td>
+          <td><input type="text" value="<%=y.Physical_Condition%>" readonly ></td>
+          <td><input type="text" value="<%=y.Dimension%>" readonly ></td>
+        </tr>
+<%
+	}
+	%>
+</tbody>
+    </table>
+  </div>
+
+  <div class="form-section" id="inspection-results">
+    <h3>Inspection Results</h3>
+    <div class="form-section" id="inspection-status">
+  <label>Inspection Status</label>
+  <input  type="text" value="<%=ifnull(data.Inspection_Status,"")%>" readonly />
+  
+  <label>Inspected By </label>
+  <input type="text" value="<%=data.QC_Inspector%>" readonly />
+  
+
+    <label class="remark-box"  >Remark/Observation</label>
+    <input type="text" value ="<%=data.Remark%>" readonly />
+  </div>
+  
+</div>
+
+  <div class="form-section" id="action-taken">
+  <h3>Action Taken</h3>
+  <div class="checkbox-group">
+    <label>
+<input type="checkbox"  <%=isAccepted%> />
+	Accepted to Stock</label><br/>
+    <label>
+	<input type="checkbox"  <%=isReturnToSupplier%> />
+	Return to Supplier</label><br/>
+	
+    <label>
+	<input type="checkbox"  <%=isSentForRework%> />
+	Sent for Rework / Repair</label><br/>
+	
+    <label>
+	<input type="checkbox"  <%=isHoldforFurther%> />
+	Hold for Further Review</label><br/>
+    <label><input type="checkbox"  <%=isCorrectiveActionRequired%> />
+	Corrective Action Required</label>
+  </div>
+  
+</div>
+
+
+</body>
+</html>
+<%
+
+}%>
+
+
+// 
+if(input.approval_version == null || input.version > input.approval_version)
+{
+	id = input.ID;
+	Imno = input.GRN;
+	Checkdetails = "https://creatorapp.zoho.com/aumaorg2023/manufacturing-application-version-2/record-summary/Inward_Material_GRI_Report/" + input.ID;
+	approvalLink = "https://creatorapp.zohopublic.com/aumaorg2023/manufacturing-application-version-2/page-perma/Approval_for_Inward_Material_GRN/jgm7phYakTrpeHB7A4yuR2zOC12TgDWSKfwa6jVdndepGEq7MsW8dGZ7E9SE23hBBJXD8p5PMFGHP1uwtMUEtj133d5SqPemFjQ2?isc5page=true&secId=" + id;
+	messageContent = "<div style='font-family: Arial, sans-serif; font-size: 14px;'>" + "You have received a Inward Material (GRI) for approval. Below are the details:<br><br>" + "<b> Imno :</b> " + input.GRN + "<br>" + "<b>Click the link below to checkdetail:</b><br>" + "<a href='" + Checkdetails + "' style='color: blue; text-decoration: none;'>Check Details </a><br><br>" + "<br><br>" + "<b>Click the link below to approve:</b><br>" + "<a href='" + approvalLink + "' style='color: blue; text-decoration: none;'>Approve Inward Material</a><br><br>" + "Thanks & Regards,<br>" + "Business Development Representative<br>" + "The Team from Auma Saudi<br>" + "+72-940-04XXXXX<br>" + "xyz@auma.com<br>" + "Auma Saudi, Saudi" + "</div>";
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"dev@heliostechlabs.com,amit.heliostech@gmail.com,alid13381@gmail.com"
+		cc:"subhash.shetty@auma.com"
+		bcc :"durga.prasad@auma.com"
+		subject :"Approval for Inward Material"
+		message :messageContent
+	]
+	input.approval_version = input.version;
+	info "Approval sent Sucessfully";
+}
