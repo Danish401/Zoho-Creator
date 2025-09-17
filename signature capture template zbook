@@ -1,0 +1,28 @@
+// signature capture into pdf template into zoho books for that we have to create a form into zoho creator signature url and out the url into it and then run the code and capture the signature into the pdf template
+
+
+// this code is written in books 
+orgID = "859704582";
+po_id = purchaseorder.get("purchaseorder_id");
+// Creator details
+ownerName = "smartvisionforinformationsys";
+appLinkName = "e-procurement-";
+reportLinkName = "All_User_Masters";
+criteria = "(role == \"Preparer\")";
+// Fetch where role = Preparer
+resp = zoho.creator.getRecords(ownerName,appLinkName,reportLinkName,criteria,1,1,"zcreator");
+info resp;
+if(resp.get("code") == 3000)
+{
+	preparer_signature_url = resp.get("data").get(0).get("signature_url");
+	// ✅ FIXED
+	// Update PO in Books
+	update_map = Map();
+	list_map = list();
+	list_map.add({"api_name":"cf_prepared_by_signature","value":preparer_signature_url});
+	// ✅ will now capture correctly
+	update_map.put("custom_fields",list_map);
+	info update_map;
+	update_resp = zoho.books.updateRecord("purchaseorders",orgID,po_id,update_map,"zbooks");
+	info update_resp;
+}
