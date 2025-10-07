@@ -1,0 +1,145 @@
+data = Sales_Order[ID == input.ID];
+// info data;
+if(data != null)
+{
+	data.Sales_Order_No=input.Sales_Order_No;
+	line_items_list = List();
+	order_currency_id = ifnull(input.Currency_Id,null);
+	// fallback currency
+	for each  sales_item in data.Items
+	{
+		item_map = Map();
+		item_map.put("name",ifnull(sales_item.Item_Description,""));
+		item_map.put("rate",ifnull(sales_item.Price_UOM,0));
+		// If Pricebook is available, use it
+		if(sales_item.Price_book_id != null && sales_item.Price_book_id != "")
+		{
+			item_map.put("pricebook_id",sales_item.Price_book_id);
+			// ---- Auto fetch pricebook details to get its currency ----
+			pricebook_resp = zoho.inventory.getRecordsByID("pricebooks","892261982",sales_item.Price_book_id,"zoho_oauth_connection");
+			if(pricebook_resp.get("code") == 0)
+			{
+				pricebook_data = pricebook_resp.get("pricebook");
+				if(pricebook_data.containKey("currency_id"))
+				{
+					order_currency_id = pricebook_data.get("currency_id");
+					// sync order currency
+				}
+			}
+		}
+		// Handle quantity
+		if(sales_item.Unit1 == "THD")
+		{
+			item_map.put("quantity",ifnull(sales_item.Quantity * 1000,1));
+		}
+		else
+		{
+			item_map.put("quantity",ifnull(sales_item.Quantity,1));
+		}
+		// Add item-level discount if available
+		if(input.Total_Discount != null && input.Total_Discount > 0)
+		{
+			// Calculate item total first
+			item_quantity = ifnull(sales_item.Quantity,1);
+			if(sales_item.Unit1 == "THD")
+			{
+				item_quantity = item_quantity * 1000;
+			}
+			item_total = ifnull(sales_item.Price_UOM,0) * item_quantity;
+			// Check if discount amount is reasonable (not more than 90% of item total)
+			if(input.Total_Discount < item_total * 0.9)
+			{
+				item_map.put("discount_amount",input.Total_Discount);
+			}
+			else
+			{
+				// Use percentage-based discount instead
+				discount_percentage = input.Total_Discount / item_total * 100;
+				if(discount_percentage <= 100)
+				{
+					item_map.put("discount",discount_percentage);
+				}
+				info "Discount too high: " + input.Total_Discount + " for item total: " + item_total;
+			}
+		}
+		// ================= TAX HANDLING =================
+		// Enable tax only if VAT registered
+		if(input.Tax_Treatmentq == "vat_registered")
+		{
+			if(input.Tax != null && input.Tax > 0)
+			{
+				// Use tax_id if required (replace with your VAT tax ID)
+				item_map.put("tax_id","6646210000000347167");
+				item_map.put("tax_percentage",input.Tax);
+				// Remove tax exemption if present
+				item_map.put("tax_exemption_id","");
+				item_map.put("tax_exemption_code","");
+			}
+		}
+		else
+		{
+			// Not VAT registered — skip tax fields completely
+			// (do not send tax_id or tax_percentage)
+		}
+		line_items_list.add(item_map);
+	}
+	if(line_items_list.size() > 0)
+	{
+		parameters_data = Map();
+		parameters_data.put("salesperson_name",data.Salesperson);
+		parameters_data.put("payment_terms_label",data.Payment_Terms);
+		parameters_data.put("shipment_date",data.Expected_Shipment_Date.toString("yyyy-MM-dd"));
+		// parameters_data.put("delivery_method",data.Delivery_Method);
+		parameters_data.put("terms",data.Terms_Conditions);
+		parameters_data.put("customer_id",data.Customer_Id);
+		parameters_data.put("salesorder_number",ifnull(data.Sales_Order_No,"SO-" + zoho.currenttime.toString("yyyyMMddHHmmss")));
+		parameters_data.put("date",data.Sales_Order_Date.toString("yyyy-MM-dd"));
+		parameters_data.put("line_items",line_items_list);
+		// For VAT registered organizations, only item-level discounts are allowed
+		// Set tax treatment properly
+		if(input.Tax_Treatmentq == "vat_registered")
+		{
+			parameters_data.put("is_inclusive_tax",false);
+			parameters_data.put("tax_treatment","vat_registered");
+			parameters_data.put("tax_id","6646210000000347167");
+		}
+		else
+		{
+			parameters_data.put("tax_treatment",input.Tax_Treatmentq);
+		}
+		// Set the currency id safely
+		if(order_currency_id != null)
+		{
+			parameters_data.put("currency_id",order_currency_id);
+		}
+		info "Parameters being sent: " + parameters_data;
+		createRecord = zoho.inventory.createRecord("salesorders","892261982",parameters_data,"zoho_oauth_connection");
+		info createRecord;
+		
+		if(createRecord.get("code") == 0)
+{
+    salesorder_id_in_books = createRecord.get("salesorder").get("salesorder_id");
+    
+    // Store the ID in your extra field
+    data.Sales_Order_Books_Id = salesorder_id_in_books; 
+    
+    
+    info "Zoho Books Sales Order ID saved: " + salesorder_id_in_books;
+}
+else
+{
+    info "Error creating Sales Order: " + createRecord.get("message");
+}
+		
+		
+		
+	}
+	else
+	{
+		info "No line items found.";
+	}
+}
+else
+{
+	info "Sales Order record not found.";
+}
