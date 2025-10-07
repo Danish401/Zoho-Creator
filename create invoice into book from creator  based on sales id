@@ -1,0 +1,84 @@
+if(input.Invoicecount == "0")
+{
+	data = Sales_Order[ID == input.ID];
+	input.Invoicecount = "1";
+	if(data != null)
+	{
+		salesorder_id = data.Sales_Order_Books_Id;
+		if(salesorder_id != null && salesorder_id != "")
+		{
+			//  Fetch Sales Order from Zoho Books
+			so_resp = zoho.inventory.getRecordsByID("salesorders","892261982",salesorder_id,"zoho_oauth_connection");
+			info so_resp;
+			if(so_resp.get("code") == 0)
+			{
+				so_data = so_resp.get("salesorder");
+				so_line_items = so_data.get("line_items");
+				line_items_list = List();
+				// Map only the required fields for invoice
+				for each  item in so_line_items
+				{
+					item_map = Map();
+					item_map.put("item_id",item.get("item_id"));
+					item_map.put("name",item.get("name"));
+					item_map.put("rate",item.get("rate"));
+					item_map.put("quantity",item.get("quantity"));
+					if(item.get("discount_amount") != null && item.get("discount_amount") > 0)
+					{
+						item_map.put("discount_amount",item.get("discount_amount"));
+					}
+					if(item.get("tax_id") != null && item.get("tax_id") != "")
+					{
+						item_map.put("tax_id",item.get("tax_id"));
+					}
+					line_items_list.add(item_map);
+				}
+				if(line_items_list.size() > 0)
+				{
+					//  Prepare invoice parameters
+					invoice_params = Map();
+					invoice_params.put("customer_id",data.Customer_Id);
+					invoice_params.put("salesorder_id",salesorder_id);
+					invoice_params.put("date",zoho.currentdate.toString("yyyy-MM-dd"));
+					invoice_params.put("payment_terms_label",data.Payment_Terms);
+					invoice_params.put("reference_number","INV-" + zoho.currenttime.toString("yyyyMMddHHmmss"));
+					invoice_params.put("notes","Invoice generated from Sales Order: " + data.Sales_Order_No);
+					invoice_params.put("line_items",line_items_list);
+					// Create invoice
+					create_invoice = zoho.inventory.createRecord("invoices","892261982",invoice_params,"zoho_oauth_connection");
+					info create_invoice;
+					if(create_invoice.get("code") == 0)
+					{
+						invoice_id_in_books = create_invoice.get("invoice").get("invoice_id");
+						data.Invoice_Books_Id=invoice_id_in_books;
+						info "Invoice created successfully! Zoho Books Invoice ID: " + invoice_id_in_books;
+					}
+					else
+					{
+						info "Error creating Invoice: " + create_invoice.get("message");
+					}
+				}
+				else
+				{
+					info "No valid line items found to create invoice!";
+				}
+			}
+			else
+			{
+				info "Failed to fetch Sales Order from Zoho Books: " + so_resp.get("message");
+			}
+		}
+		else
+		{
+			info "Zoho Books Sales Order ID not found in this record!";
+		}
+	}
+	else
+	{
+		info "Sales Order record not found in Creator!";
+	}
+}
+else
+{
+	success message "Invoice is already created";
+}
