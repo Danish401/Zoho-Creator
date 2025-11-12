@@ -1,0 +1,18 @@
+// Put this in Sales_Order_Type → On User Input (client)
+if (input.Sales_Order_Type == "Manufacturing")
+{
+    // remove existing options from the Quotation_Type dropdown in the UI
+    clear Quotation_Type;
+    // add only these two choices
+    Quotation_Type:ui.add({"Ex","Non Ex"});
+    // clear any previously selected value so user must re-select (optional)
+    input.Quotation_Type = "";
+}
+else
+{
+    // restore all options
+    clear Quotation_Type;
+    Quotation_Type:ui.add({"Ex","Non Ex","Spares"});
+    // optional: leave existing selection or set a default
+    // input.Quotation_Type = "Ex";
+}
