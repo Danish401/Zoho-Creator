@@ -1,0 +1,105 @@
+//. onuser input 
+total = 0;
+// Loop through all rows of subform
+for each  rows in input.Items
+{
+	if(rows.Gross_Weight != null)
+	{
+		total = total + rows.Gross_Weight;
+	}
+}
+// Set total into main form field
+input.Total_Gross_Weight = total;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// On Delete Row (subform)
+// 'row' is the row being deleted (available in On Delete Row context)
+
+deleted_weight = 0;
+if( row != null && row.Gross_Weight != null )
+{
+    deleted_weight = row.Gross_Weight;
+}
+
+// Sum what Creator currently returns in input.Items
+sum_now = 0;
+for each r in input.Items
+{
+    if( r.Gross_Weight != null )
+    {
+        sum_now = sum_now + r.Gross_Weight;
+    }
+}
+
+// Defensive fix:
+// If the deleted row is still present in input.Items at this moment,
+// sum_now will include deleted_weight. Subtract it to get the real final total.
+// If Creator already removed the row from input.Items, subtraction will undercount,
+// so only subtract when needed.
+
+should_subtract = false;
+if( deleted_weight != 0 )
+{
+    // Check whether any row in input.Items has the same Gross_Weight and (if available) same row ID
+    found_same = false;
+    for each r in input.Items
+    {
+        // Prefer comparing a row identifier if available, otherwise fallback to weight comparison.
+        // Many Creator subform rows have r.ID — try that first safely.
+        try
+        {
+            if( (r.ID != null) && (row.ID != null) && (r.ID == row.ID) )
+            {
+                found_same = true;
+                break;
+            }
+        }
+        catch (e)
+        {
+            // ignore and continue
+        }
+        // fallback: same numeric value (less robust but helps when IDs are not accessible)
+        if( r.Gross_Weight == deleted_weight )
+        {
+            found_same = true;
+            break;
+        }
+    }
+    if( found_same )
+    {
+        should_subtract = true;
+    }
+}
+
+if( should_subtract )
+{
+    sum_now = sum_now - deleted_weight;
+}
+
+if( sum_now < 0 )
+{
+    sum_now = 0;
+}
+
+// Update main form total
+input.Total_Gross_Weight = sum_now;
